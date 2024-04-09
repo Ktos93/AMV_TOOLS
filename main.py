@@ -374,7 +374,6 @@ class SetupLight(bpy.types.Operator):
             obj.data.materials.append(mat)
 
         # hacky refresh
-        bpy.context.scene.texture_option = bpy.context.scene.texture_option
         bpy.context.scene.light_strength = bpy.context.scene.light_strength
         return {'FINISHED'}
 
