@@ -18,7 +18,6 @@ classes = (
     main.BakeAMVToJSON,
     main.DisplayProbes,
     main.DeleteProbes,
-    main.BakeAMVToJSON,
     main.SaveProbesLocation,
     main.ClearProbesLocation,
     main.SetupLight,
@@ -34,10 +33,13 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    main.register()
 
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+    main.unregister()
 
 if __name__ == "__main__":
     register()
+   

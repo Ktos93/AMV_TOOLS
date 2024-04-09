@@ -595,7 +595,7 @@ def updateLightDirection(self, context):
         obj.rotation_euler.z += -np.pi/2
 
 
-def register():mo
+def register():
     bpy.types.Scene.interval = bpy.props.FloatProperty(name="Interval", default=1.0, min=0.1)
     bpy.types.Scene.offset = bpy.props.FloatVectorProperty(name="Offset", default=(0.5, 0.5, 0.5), update=updateProbesOffset)
     bpy.types.Scene.sphere_radius = bpy.props.FloatProperty(name="Sphere Radius", default=0.15, min=0.05)
@@ -630,9 +630,3 @@ def unregister():
     del bpy.types.Scene.show_gizmo
     del bpy.types.Scene.proggress
     del bpy.types.Scene.light_strength
-
-
-
-
-if __name__ == "__main__":
-    register()
