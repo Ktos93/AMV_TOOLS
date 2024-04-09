@@ -18,6 +18,8 @@ This addon is specifically designed to assist in creating ambient mass volumes w
 2. Refer to the documentation or tooltips provided within Blender for detailed instructions on each feature.
 3. Experiment with different tools and settings to create ambient mass volumes.
 
+## Credits
+This addon utilizes the `texconv` tool developed by Microsoft. Special thanks to Microsoft for providing this invaluable tool for texture conversion.
    
 ## License
 This addon is distributed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html). See the LICENSE file for details.
