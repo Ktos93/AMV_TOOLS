@@ -1,7 +1,7 @@
 # AMV TOOLS (Ambient Mask Volume) - Blender Addon
 
 ## Introduction
-This addon is specifically designed to assist in creating ambient mass volumes within the Blender environment
+This addon is specifically designed to assist in creating ambient mask volumes within the Blender environment
 
 ## Features
 - **Efficient Volume Creation**: Easily create ambient mask volumes for environments directly within Blender.
