@@ -16,7 +16,7 @@ This addon is specifically designed to assist in creating ambient mass volumes w
 ## Usage
 1. After installation, you can find the addon's features within the Blender interface.
 2. Refer to the documentation or tooltips provided within Blender for detailed instructions on each feature.
-3. Experiment with different tools and settings to create ambient mass volumes.
+3. Once you've created your AMV and saved it as a JSON file (e.g., AMVJSON.json), drag and drop this file onto the JSON_TO_AMV.bat file to convert it to the DDS format with the appropriate settings.
 
 ## Credits
 This addon utilizes the `texconv` tool developed by Microsoft. Special thanks to Microsoft for providing this invaluable tool for texture conversion.
