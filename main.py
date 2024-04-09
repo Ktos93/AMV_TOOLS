@@ -25,12 +25,13 @@ def setup_bake_settings():
     scene.render.bake.target = 'VERTEX_COLORS'
     scene.cycles.bake_type = 'DIFFUSE'
     scene.render.use_bake_selected_to_active = False
+    scene.render.bake.use_pass_direct = True
     scene.render.bake.use_pass_indirect = False
-    bpy.context.scene.render.bake.use_pass_color = False
-    bpy.context.scene.cycles.samples = 32
-    bpy.context.scene.cycles.use_adaptive_sampling = False
-    bpy.context.scene.cycles.use_denoising = False
-    bpy.context.scene.cycles.device = 'CPU'
+    scene.render.bake.use_pass_color = False
+    scene.cycles.samples = 32
+    scene.cycles.use_adaptive_sampling = False
+    scene.cycles.use_denoising = False
+    scene.cycles.device = 'CPU'
 
 
 
@@ -39,8 +40,7 @@ def get_parameters():
     interval = scene.interval
     offset = scene.offset
     sphere_radius = scene.sphere_radius
-    texture_option = scene.texture_option
-    return interval, offset, sphere_radius, texture_option
+    return interval, offset, sphere_radius
 
 
 class BakeAMVToJSON(bpy.types.Operator):
@@ -65,31 +65,33 @@ class BakeAMVToJSON(bpy.types.Operator):
 
         setup_bake_settings()
 
-        interval, offset, sphere_radius, texture_option = get_parameters()
+        interval, offset, sphere_radius = get_parameters()
 
         min_x, min_y, min_z, max_x, max_y, max_z = get_object_bounds(obj)
 
         num_x_spheres, num_y_spheres, num_z_spheres = calculate_sphere_counts(interval, min_x, min_y, min_z, max_x,
                                                                              max_y, max_z)
 
-        total_spheres = num_x_spheres * num_y_spheres * num_z_spheres * 3
-
-        colors_3d = []
+        total_spheres = num_x_spheres * num_y_spheres * num_z_spheres
+        
+        colors_3d_0 = []
+        colors_3d_1 = []
         current = 0
 
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=12, radius=sphere_radius)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=sphere_radius)
         sphere_obj = bpy.context.object
         sphere_obj.select_set(True)
         bpy.context.view_layer.objects.active = sphere_obj
 
         probes_location_3d = json.loads(bpy.context.scene.probes_location_3d)
         should_use_saved_data = len(probes_location_3d) > 0
-        light_rotation = bpy.data.objects['Light'].rotation_euler[2]
 
         for i in range(num_z_spheres):
-            colors_2d = []
+            colors_2d_0 = []
+            colors_2d_1 = []
             for j in range(num_y_spheres):
-                row_colors = []
+                row_colors_0 = []
+                row_colors_1 = []
                 for k in range(num_x_spheres):
                     if should_use_saved_data:
                         x, y, z = probes_location_3d[i][j][k]
@@ -99,54 +101,82 @@ class BakeAMVToJSON(bpy.types.Operator):
                         y = min_y + j * interval + offset[1]
                         z = min_z + i * interval + offset[2]
                         sphere_obj.location = (x, y, z)
+                        
+                    bpy.ops.geometry.color_attribute_add()
+                             
+                    bpy.ops.object.bake(type='DIFFUSE')
+                                
+                    vertices = sphere_obj.data.vertices
+                    vertex_colors = sphere_obj.data.color_attributes.active.data
+                             
+                    median_x = sum([v.co.x for v in vertices]) / len(vertices)
+                    median_y = sum([v.co.y for v in vertices]) / len(vertices)
+                    median_z = sum([v.co.z for v in vertices]) / len(vertices)
+                    
+                    color_array = [[],[],[],[],[],[]]
+                    
+                    for v in vertices:
 
-                    output_color = [0.0, 0.0, 0.0]
-                    for r in range(3):
-                        bpy.ops.geometry.color_attribute_add()
-                        if texture_option == "TEXTURE_0":
-                            if r == 0:
-                                bpy.data.objects['Light'].rotation_euler[2] = light_rotation
-                            elif r == 1:
-                                bpy.data.objects['Light'].rotation_euler[2] = np.pi
-                            else:
-                                bpy.data.objects['Light'].rotation_euler[2] -= np.pi/2
+                        if v.co.x >= median_x:
+                            color_array[0].append(vertex_colors[v.index].color[:])
                         else:
-                            if r == 0:
-                                bpy.data.objects['Light'].rotation_euler[2] = light_rotation
-                            elif r == 1:
-                                bpy.data.objects['Light'].rotation_euler[1] = -np.pi/2
-                            else:
-                                bpy.data.objects['Light'].rotation_euler[1] = np.pi/2
-
-                        bpy.ops.object.bake(type='DIFFUSE')
-
-                        vertex_colors = sphere_obj.data.color_attributes.active.data
-                        colors = [vertex_colors[vertex.index].color[:] for vertex in sphere_obj.data.vertices]
-                        bpy.ops.geometry.color_attribute_remove()
-                        vertex_colors_array = np.array(colors)
-                        average_color = np.mean(vertex_colors_array, axis=0)
-                        output_color[r] = average_color[0] ## RGB ARE SAME
-                        current += 1
-                    row_colors.append(output_color)
-                colors_2d.append(row_colors)
+                            color_array[1].append(vertex_colors[v.index].color[:])   
+                    
+                    for v in vertices:
+                        if v.co.y >= median_y:
+                            color_array[2].append(vertex_colors[v.index].color[:])
+                        else:
+                            color_array[3].append(vertex_colors[v.index].color[:])   
+                    
+                    for v in vertices:
+                        if v.co.z >= median_z:
+                            color_array[4].append(vertex_colors[v.index].color[:])
+                        else:
+                            color_array[5].append(vertex_colors[v.index].color[:])
+                               
+                   
+                    r_0 =  np.mean(np.array(color_array[0]), axis=0)[0]
+                    g_0 =  np.mean(np.array(color_array[1]), axis=0)[0]
+                    b_0 =  np.mean(np.array(color_array[2]), axis=0)[0]
+                    
+                    r_1 =  np.mean(np.array(color_array[3]), axis=0)[0]
+                    g_1 =  np.mean(np.array(color_array[4]), axis=0)[0]
+                    b_1 =  np.mean(np.array(color_array[5]), axis=0)[0]
+                   
+                    current += 1
+                    output_color_0 = [r_0,g_0,b_0]
+                    output_color_1 = [r_1,g_1,b_1]
+                        
+                       
+                    bpy.ops.geometry.color_attribute_remove() 
+                    
+                    row_colors_0.append(output_color_0)
+                    row_colors_1.append(output_color_1)
+                    
+                colors_2d_0.append(row_colors_0)
+                colors_2d_1.append(row_colors_1)
+                
                 bpy.context.scene.proggress = f"{total_spheres}/{current}"
                 print(f"{current}/{total_spheres} spheres created", end='\r')
                 bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 
-            colors_3d.append(colors_2d)
+            colors_3d_0.append(colors_2d_0)
+            colors_3d_1.append(colors_2d_1)
 
         bpy.data.objects.remove(sphere_obj, do_unlink=True)
-
-        bpy.data.objects['Light'].rotation_euler[2] = light_rotation
-        bpy.data.objects['Light'].rotation_euler[1] = 0
 
         print("\nSpheres creation finished.")
 
         filepath_full = bpy.path.abspath(bpy.context.scene.output_directory)
-        json_filepath = os.path.join(filepath_full, "AMVJSON.json")
+        json_filepath_0 = os.path.join(filepath_full, "AMV_0.json")
+        json_filepath_1 = os.path.join(filepath_full, "AMV_1.json")
 
-        with open(json_filepath, 'w') as json_file:
-            json.dump(colors_3d, json_file)
+        with open(json_filepath_0, 'w') as json_file:
+            json.dump(colors_3d_0, json_file)
+            
+        with open(json_filepath_1, 'w') as json_file:
+            json.dump(colors_3d_1, json_file) 
+               
         bpy.context.scene.proggress = "Bake to JSON"
         return {'FINISHED'}
 
@@ -170,14 +200,14 @@ class DisplayProbes(bpy.types.Operator):
             self.report({"INFO"}, "No mesh objects selected!")
             return {'CANCELLED'}
 
-        interval, offset, sphere_radius, _ = get_parameters()
+        interval, offset, sphere_radius = get_parameters()
 
         min_x, min_y, min_z, max_x, max_y, max_z = get_object_bounds(obj)
 
         num_x_spheres, num_y_spheres, num_z_spheres = calculate_sphere_counts(interval, min_x, min_y, min_z, max_x,
                                                                              max_y, max_z)
 
-        total_spheres = num_x_spheres * num_y_spheres * num_z_spheres * 3
+        total_spheres = num_x_spheres * num_y_spheres * num_z_spheres
         
         bpy.context.scene.proggress = f"Bake to JSON [{total_spheres}]"
 
@@ -187,7 +217,7 @@ class DisplayProbes(bpy.types.Operator):
             probes_collection = bpy.data.collections.new(collection_name)
             bpy.context.scene.collection.children.link(probes_collection)
 
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=sphere_radius)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=sphere_radius)
         orig_sphere = bpy.context.active_object
         orig_sphere.name = "Probe"
         obj_old_coll = orig_sphere.users_collection
@@ -316,46 +346,10 @@ class SetupLight(bpy.types.Operator):
             self.report({"INFO"}, "Light object already exist!")
             return {'CANCELLED'}
 
-        # Define the radius of the half-sphere
-        radius = 400.0
-        segments = 32
 
-        # Create a new mesh
-        mesh = bpy.data.meshes.new("Light")
-
-        # Create a new object and link it to the mesh
-        obj = bpy.data.objects.new("Light", mesh)
-        bpy.context.collection.objects.link(obj)
-
-        # Create a bmesh
-        bm = bmesh.new()
-
-        # Generate the half-sphere vertices with rotation
-        for i in range(segments + 1):
-            theta = np.pi * i / segments
-            for j in range(segments // 2 + 1):
-                phi = 2 * np.pi * j / segments
-                x = radius * np.sin(theta) * np.cos(phi)
-                y = radius * np.sin(theta) * np.sin(phi)
-                z = radius * np.cos(theta)
-                # Rotate the vertex
-                x_rot = x * np.cos(-np.pi / 2) - y * np.sin(-np.pi / 2)
-                y_rot = x * np.sin(-np.pi / 2) + y * np.cos(-np.pi / 2)
-                bm.verts.new((x_rot, y_rot, z))
-
-        # Create faces
-        bm.verts.ensure_lookup_table()
-        for i in range(segments):
-            for j in range(segments // 2):
-                v1 = bm.verts[i * (segments // 2 + 1) + j]
-                v2 = bm.verts[(i + 1) * (segments // 2 + 1) + j]
-                v3 = bm.verts[(i + 1) * (segments // 2 + 1) + j + 1]
-                v4 = bm.verts[i * (segments // 2 + 1) + j + 1]
-                bm.faces.new((v1, v2, v3, v4))
-
-        # Update the mesh with the bmesh data
-        bm.to_mesh(mesh)
-        bm.free()
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=400, enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
+        obj = bpy.context.object
+        obj.name = "Light"
 
         # Check if the material already exists
         material_name = "EmissiveMaterial"
@@ -381,6 +375,7 @@ class SetupLight(bpy.types.Operator):
 
         # hacky refresh
         bpy.context.scene.texture_option = bpy.context.scene.texture_option
+        bpy.context.scene.light_strength = bpy.context.scene.light_strength
         return {'FINISHED'}
 
 
@@ -420,8 +415,6 @@ class AMV_PT_TOOLS(bpy.types.Panel):
         
         row = layout.row()
         row.prop(context.scene, "output_directory", text="Output Directory")
-        row = layout.row()
-        row.prop(context.scene, "texture_option", text="Texture Type", icon="TEXTURE")
 
         
 class AMV_PT_LOCATION_TOOLS(bpy.types.Panel):
@@ -568,33 +561,6 @@ def updateProbesOffset(self, context):
             obj.location.z += new_offset[2]   
             obj["offset"] = offset
 
-def updateLightDirection(self, context):
-
-    obj = bpy.data.objects['Light']
-    # Your code here
-    if self.texture_option == "TEXTURE_0":
-        target_position = Vector((5.0, 0.0, 0.0))
-
-    else:
-        target_position = Vector((-5.0, 0.0, 0.0))
-
-    # Calculate the direction vector from the object to the target
-    direction = target_position - obj.location
-    direction.normalize()
-
-    # Calculate the rotation quaternion
-    rotation_quaternion = direction.to_track_quat('Z', 'Y')
-
-    # Apply the rotation to the object
-    obj.rotation_euler = rotation_quaternion.to_euler()
-
-    # If you want to only rotate along Z-axis, you can modify the Euler rotation accordingly
-    obj.rotation_euler.x = 0
-    obj.rotation_euler.y = 0
-    if self.texture_option == "TEXTURE_0":
-        obj.rotation_euler.z += -np.pi/2
-
-
 def register():
     bpy.types.Scene.interval = bpy.props.FloatProperty(name="Interval", default=1.0, min=0.1)
     bpy.types.Scene.offset = bpy.props.FloatVectorProperty(name="Offset", default=(0.5, 0.5, 0.5), update=updateProbesOffset)
@@ -602,18 +568,12 @@ def register():
     bpy.types.Scene.size = bpy.props.IntVectorProperty(name="Size", default=(0, 0, 0))
     bpy.types.Scene.probes_location_3d = bpy.props.StringProperty(name="Probes Location 3D Array", default="[]")
     bpy.types.Scene.output_directory = bpy.props.StringProperty(name="Output Directory", subtype='DIR_PATH')
-    bpy.types.Scene.texture_option = bpy.props.EnumProperty(
-        items=[('TEXTURE_0', "Texture 0", ""),
-               ('TEXTURE_1', "Texture 1", "")],
-        name="Texture Option",
-        update=updateLightDirection
-    )
     bpy.types.Scene.input_location = bpy.props.FloatVectorProperty(name="Interior Location")
     bpy.types.Scene.input_rotation = bpy.props.FloatVectorProperty(name="Interior Rotation" ,size=4)
     bpy.types.Scene.output_location_rotation = bpy.props.FloatVectorProperty(name="My Vector",size=4)
     bpy.types.Scene.show_gizmo = bpy.props.BoolProperty(name="Show Gizmo", default=True)
     bpy.types.Scene.proggress = bpy.props.StringProperty(default="Bake to JSON")
-    bpy.types.Scene.light_strength = bpy.props.FloatProperty(name="Light Strength",update=update_light_strength, default=1.0)
+    bpy.types.Scene.light_strength = bpy.props.FloatProperty(name="Light Strength",update=update_light_strength, default=0.5)
 
 
 def unregister():
