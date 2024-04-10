@@ -9,8 +9,10 @@ import xml.etree.ElementTree as ET
 import subprocess
 
 def get_object_bounds(obj):
-    min_x, min_y, min_z = obj.bound_box[0]
-    max_x, max_y, max_z = obj.bound_box[6]
+    world_matrix = obj.matrix_world
+
+    min_x, min_y, min_z = world_matrix @ Vector(obj.bound_box[0])
+    max_x, max_y, max_z = world_matrix @ Vector(obj.bound_box[6])
     return min_x, min_y, min_z, max_x, max_y, max_z
 
 
