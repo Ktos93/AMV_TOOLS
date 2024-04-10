@@ -5,6 +5,8 @@ import json
 import os
 from bpy.types import Gizmo, GizmoGroup
 from mathutils import Vector, Quaternion
+import xml.etree.ElementTree as ET
+import subprocess
 
 def get_object_bounds(obj):
     min_x, min_y, min_z = obj.bound_box[0]
@@ -168,15 +170,38 @@ class BakeAMVToJSON(bpy.types.Operator):
         print("\nSpheres creation finished.")
 
         filepath_full = bpy.path.abspath(bpy.context.scene.output_directory)
-        json_filepath_0 = os.path.join(filepath_full, "AMV_0.json")
-        json_filepath_1 = os.path.join(filepath_full, "AMV_1.json")
+        
+        
+        blend_file_path = bpy.data.filepath
+        directory = os.path.dirname(blend_file_path)
+        
+        uuid = bpy.context.scene.uuid
+        
+        new_folder_path = os.path.join(filepath_full, uuid)
+        
+        if not os.path.exists(new_folder_path):
+            os.makedirs(new_folder_path)
+        
+        
+        intuuid = str(int(uuid, 16))
+        json_filepath_0 = os.path.join(new_folder_path, intuuid + "_0.json")
+        json_filepath_1 = os.path.join(new_folder_path, intuuid + "_1.json")
 
         with open(json_filepath_0, 'w') as json_file:
             json.dump(colors_3d_0, json_file)
             
         with open(json_filepath_1, 'w') as json_file:
             json.dump(colors_3d_1, json_file) 
-               
+        
+        xml_filepath = os.path.join(new_folder_path, uuid + ".xml")
+        create_xml_file(xml_filepath)     
+        
+        converter_path = os.path.join(filepath_full, "amv.py")
+        print(converter_path)
+        if  os.path.exists(converter_path):
+            subprocess.run(["py", converter_path, json_filepath_0])
+            subprocess.run(["py", converter_path, json_filepath_1])
+            
         bpy.context.scene.proggress = "Bake to JSON"
         return {'FINISHED'}
 
@@ -411,7 +436,10 @@ class AMV_PT_TOOLS(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene, "size", text="Size")
         row.enabled = False
-        
+        row = layout.row()
+        row.prop(context.scene, "uuid", text="UUID")
+        row = layout.row()
+        row.operator("object.generate_uuid", text="Generate UUID")
         row = layout.row()
         row.prop(context.scene, "output_directory", text="Output Directory")
 
@@ -429,11 +457,14 @@ class AMV_PT_LOCATION_TOOLS(bpy.types.Panel):
 
         column = layout.column()
         column.prop(context.scene, "input_location", text="Interior Location")
-        column = layout.column()
-        column.prop(context.scene, "input_rotation", text="Interior Rotation")
+        layout.prop(context.scene, "input_rotation", text="Interior Rotation")
         layout.operator("object.calculate_position", text="Calculate Position")
-        column = layout.column()
-        column.prop(context.scene, "output_location_rotation", text="Output XYZ + Rot")
+        row = layout.row()
+        row.enabled = False
+        row.prop(context.scene, "output_location_rotation", text="Output XYZ + Rot")
+        row = layout.row()
+        row.enabled = False
+        row.prop(context.scene, "scale", text="Output Scale")
         
         
 class CalculatePosition(bpy.types.Operator):
@@ -470,13 +501,11 @@ class CalculatePosition(bpy.types.Operator):
         bbox_corners_array = np.array([corner[:] for corner in bbox_corners])
         dimensions = np.ptp(bbox_corners_array, axis=0) / 2  # Compute the range (max - min) along each axis
 
-        print("Dimensions (width, height, depth):", dimensions)
+        bpy.context.scene.scale = dimensions
     
-        # Oblicz środek bound boxa
         center = sum(bbox_corners, Vector()) / 8
     
         bpy.context.scene.output_location_rotation = (center[0], center[1],center[2],-euler_rotation_degrees[2])
-        
         
         obj.location = (0,0,0)
         obj.rotation_euler = (0,0,0)
@@ -496,6 +525,7 @@ class AMV_PT_ADVANCED_TOOLS(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene, "interval", text="Interval", icon="DRIVER_DISTANCE")
         row.prop(context.scene, "sphere_radius", text="Sphere Radius")    
+
 
 
 class BoundingBoxGizmo(Gizmo):
@@ -547,6 +577,21 @@ class BoundingBoxGizmoGroup(GizmoGroup):
 
 
 
+class GenerateUUID(bpy.types.Operator):
+    bl_idname = "object.generate_uuid"
+    bl_label = "Generate UUID"
+
+    def execute(self, context):
+        
+        random_bytes = np.random.bytes(8)
+        hex_bytes = ''.join(f"{x:02X}" for x in random_bytes)
+        formatted_uuid = '0x' + hex_bytes[:16]
+        
+        bpy.context.scene.uuid = formatted_uuid
+        
+        return {'FINISHED'}
+
+
 def updateProbesOffset(self, context):
     collection_name = 'Probes'
     
@@ -559,6 +604,85 @@ def updateProbesOffset(self, context):
             obj.location.y += new_offset[1]
             obj.location.z += new_offset[2]   
             obj["offset"] = offset
+    
+
+def create_xml_file(file_path):
+    # Tworzenie głównego elementu <Item>
+    item_element = ET.Element("Item")
+    
+    # Dodawanie podelementów do elementu <Item>
+    ET.SubElement(item_element, "enabled", value="True")
+    
+    loc_rot = bpy.context.scene.output_location_rotation
+    ET.SubElement(item_element, "position", x="{:.4f}".format(loc_rot[0]), y="{:.4f}".format(loc_rot[1]), z="{:.4f}".format(loc_rot[2]))
+    
+    ET.SubElement(item_element, "rotation", x="{:.4f}".format(loc_rot[3]), y="0", z="0")
+   
+    scale = bpy.context.scene.scale
+    ET.SubElement(item_element, "scale", x="{:.5f}".format(scale[0]), y="{:.5f}".format(scale[1]), z="{:.5f}".format(scale[2]))
+
+    ET.SubElement(item_element, "falloffScaleMin", x="1", y="1", z="1")
+    
+    ET.SubElement(item_element, "falloffScaleMax", x="1.2", y="1.2", z="1.2")
+    
+    ET.SubElement(item_element, "samplingOffsetStrength", value="0")
+    
+    ET.SubElement(item_element, "falloffPower", value="12")
+    
+    ET.SubElement(item_element, "distance", value="-1")
+    
+    size = scale = bpy.context.scene.size
+    ET.SubElement(item_element, "cellCountX", value=str(size[0]))
+    
+    ET.SubElement(item_element, "cellCountY", value=str(size[1]))
+    
+    ET.SubElement(item_element, "cellCountZ", value=str(size[2]))
+    
+    ET.SubElement(item_element, "clipPlane0", x="0", y="0", z="0", w="1")
+    
+    ET.SubElement(item_element, "clipPlane1", x="0", y="0", z="0", w="1")
+    
+    ET.SubElement(item_element, "clipPlane2", x="0", y="0", z="0", w="1")
+    
+    ET.SubElement(item_element, "clipPlane3", x="0", y="0", z="0", w="1")
+    
+    ET.SubElement(item_element, "clipPlaneBlend0", value="0")
+    
+    ET.SubElement(item_element, "clipPlaneBlend1", value="0")
+    
+    ET.SubElement(item_element, "clipPlaneBlend2", value="0")
+    
+    ET.SubElement(item_element, "clipPlaneBlend3", value="0")
+    
+    ET.SubElement(item_element, "blendingMode").text = "BM_Lerp"
+    
+    ET.SubElement(item_element, "layer", value="0")
+    
+    ET.SubElement(item_element, "order", value="5")
+    
+    ET.SubElement(item_element, "natural", value="True")
+    
+    ET.SubElement(item_element, "attachedToDoor", value="False")
+    
+    ET.SubElement(item_element, "interior", value="True")
+    
+    ET.SubElement(item_element, "exterior", value="False")
+    
+    ET.SubElement(item_element, "vehicleInterior", value="False")
+    
+    ET.SubElement(item_element, "sourceFolder").text = "AMV_TOOL"
+    
+    uuid = bpy.context.scene.uuid
+    ET.SubElement(item_element, "uuid", value=uuid)
+    
+    ET.SubElement(item_element, "iplHash", value="0")
+    
+    tree = ET.ElementTree(item_element)
+    
+    ET.indent(tree, space="\t", level=0)
+    
+    tree.write(file_path, xml_declaration=True, encoding="utf-8")
+    
 
 def register():
     bpy.types.Scene.interval = bpy.props.FloatProperty(name="Interval", default=1.0, min=0.1)
@@ -573,6 +697,8 @@ def register():
     bpy.types.Scene.show_gizmo = bpy.props.BoolProperty(name="Show Gizmo", default=True)
     bpy.types.Scene.proggress = bpy.props.StringProperty(default="Bake to JSON")
     bpy.types.Scene.light_strength = bpy.props.FloatProperty(name="Light Strength",update=update_light_strength, default=0.5)
+    bpy.types.Scene.uuid = bpy.props.StringProperty(name="UUID", default="00000000000000000000")
+    bpy.types.Scene.scale = bpy.props.FloatVectorProperty(name="Scale", default=(0.0, 0.0, 0.0))
 
 
 def unregister():
@@ -589,3 +715,5 @@ def unregister():
     del bpy.types.Scene.show_gizmo
     del bpy.types.Scene.proggress
     del bpy.types.Scene.light_strength
+    del bpy.types.Scene.uuid
+    del bpy.types.Scene.scale

@@ -27,6 +27,7 @@ classes = (
     main.AMV_PT_ADVANCED_TOOLS,
     main.BoundingBoxGizmo,
     main.BoundingBoxGizmoGroup,
+    main.GenerateUUID,
     
 )
 
