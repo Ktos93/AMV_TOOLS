@@ -2,7 +2,7 @@ import bpy
 import numpy as np
 from mathutils import Vector, Quaternion
 
-from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_probes_offset, update_light_strength
+from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_probes_offset, update_light_strength, get_selected_vertices
 
 
 class AMV_PT_Tools(bpy.types.Panel):
