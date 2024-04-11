@@ -62,6 +62,8 @@ class AMV_PT_Location_Tools(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
+        layout.use_property_split = True
+        layout.use_property_decorate = True
         column = layout.column()
         column.prop(context.scene, "input_location", text="Interior Location")
         layout.prop(context.scene, "input_rotation", text="Interior Rotation")
