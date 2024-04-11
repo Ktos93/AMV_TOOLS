@@ -60,8 +60,8 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
                         sphere_obj.location = (x, y, z)
                     else:
                         x = zone.bb_min[0] + k * interval + offset[0]
-                        y = zone.bb_min[0] + j * interval + offset[1]
-                        z = zone.bb_min[0] + i * interval + offset[2]
+                        y = zone.bb_min[1] + j * interval + offset[1]
+                        z = zone.bb_min[2] + i * interval + offset[2]
                         sphere_obj.location = (x, y, z)
                         
                     bpy.ops.geometry.color_attribute_add()
