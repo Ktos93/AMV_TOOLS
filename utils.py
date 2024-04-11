@@ -30,6 +30,9 @@ def bbox_dimensions(bbox):
 
 
 def calculate_sphere_counts(interval, min_bound, max_bound):
+    for i in range(3):
+        if min_bound[i] > max_bound[i]:
+            min_bound[i], max_bound[i] = max_bound[i], min_bound[i]
     num_spheres = [round((max_bound[i] - min_bound[i]) / interval) for i in range(3)]
     return tuple(num_spheres)
 
