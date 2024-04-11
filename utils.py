@@ -68,20 +68,6 @@ def update_light_strength(self, context):
         bpy.data.materials["EmissiveMaterial"].node_tree.nodes["Emission"].inputs[1].default_value = self.light_strength
 
 
-def update_probes_offset(self, context):
-    selected_zone = get_selected_zone(context)
-    offset = selected_zone.offset
-
-    collection_name = 'Probes-'+ selected_zone.name
-
-    if collection_name in bpy.data.collections:
-        probes_collection = bpy.data.collections.get(collection_name)
-        for obj in probes_collection.objects:
-            new_offset = np.array(offset) - np.array(obj["offset"])
-            obj.location += Vector(new_offset)
-            obj["offset"] = offset
-
-
 def draw_list_with_add_remove(layout: bpy.types.UILayout, add_operator: str, remove_operator: str, *temp_list_args, **temp_list_kwargs):
     """Draw a UIList with an add and remove button on the right column. Returns the left column."""
     row = layout.row()

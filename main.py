@@ -2,7 +2,7 @@ import bpy
 import numpy as np
 from mathutils import Vector, Quaternion
 
-from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_probes_offset, update_light_strength, get_selected_vertices
+from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_light_strength, get_selected_vertices
 
 
 class AMV_PT_Tools(bpy.types.Panel):
@@ -225,6 +225,20 @@ def get_selected_zone(context) -> 'Zone_Properties':
         return zones[zone_index]
     else:
         return None
+
+def update_probes_offset(self, context):
+    selected_zone = get_selected_zone(context)
+    offset = selected_zone.offset
+
+    collection_name = 'Probes-'+ selected_zone.name
+
+    if collection_name in bpy.data.collections:
+        probes_collection = bpy.data.collections.get(collection_name)
+        for obj in probes_collection.objects:
+            new_offset = np.array(offset) - np.array(obj["offset"])
+            obj.location += Vector(new_offset)
+            obj["offset"] = offset
+
 
 class Zone_Properties(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Name")
