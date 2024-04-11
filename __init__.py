@@ -12,34 +12,13 @@ bl_info = {
 
 import bpy
 
-from . import main
-
-classes = (
-    main.BakeAMVToJSON,
-    main.DisplayProbes,
-    main.DeleteProbes,
-    main.SaveProbesLocation,
-    main.ClearProbesLocation,
-    main.SetupLight,
-    main.AMV_PT_TOOLS,
-    main.AMV_PT_LOCATION_TOOLS,
-    main.CalculatePosition,
-    main.AMV_PT_ADVANCED_TOOLS,
-    main.BoundingBoxGizmo,
-    main.BoundingBoxGizmoGroup,
-    main.GenerateUUID,
-    
-)
-
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-    main.register()
-
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
-    main.unregister()
+register, unregister = bpy.utils.register_submodule_factory(__package__, (
+    'main', 
+    'probes',
+    'bake',
+    'light',
+    'gizmo',
+))
 
 if __name__ == "__main__":
     register()
