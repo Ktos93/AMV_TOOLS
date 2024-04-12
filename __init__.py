@@ -11,35 +11,60 @@ bl_info = {
 }
 
 import bpy
+import sys
+import importlib
+import subprocess
+
+# Blender's Python executable
+pybin = sys.executable
+
+def add_user_site():
+    # Locate users site-packages (writable)
+    user_site = subprocess.check_output([pybin, "-m", "site", "--user-site"])
+    user_site = user_site.decode("utf8").rstrip("\n")   # Convert to string and remove line-break
+    # Add user packages to sys.path (if it exits)
+    user_site_exists = user_site is not None
+    if user_site not in sys.path and user_site_exists:
+        sys.path.append(user_site)
+    return user_site_exists
+
+def enable_pip():
+    if importlib.util.find_spec("pip") is None:
+        subprocess.check_call([pybin, "-m", "ensurepip", "--user"])
+        subprocess.check_call([pybin, "-m", "pip", "install", "--upgrade", "pip", "--user"])
+    
+def install_module(module : str):
+    if importlib.util.find_spec(module) is None:
+        subprocess.check_call([pybin, "-m", "pip", "install", module, "--user"])
+
+user_site_added = add_user_site()
+enable_pip()
+modules = ["tifffile"] 
+for module in modules:
+    install_module(module)
+# If there was no user-site before...
+if not user_site_added:
+    add_user_site()
 
 from . import main
-
-classes = (
-    main.BakeAMVToJSON,
-    main.DisplayProbes,
-    main.DeleteProbes,
-    main.SaveProbesLocation,
-    main.ClearProbesLocation,
-    main.SetupLight,
-    main.AMV_PT_TOOLS,
-    main.AMV_PT_LOCATION_TOOLS,
-    main.CalculatePosition,
-    main.AMV_PT_ADVANCED_TOOLS,
-    main.BoundingBoxGizmo,
-    main.BoundingBoxGizmoGroup,
-    
-)
+from . import probes
+from . import bake
+from . import light
+from . import gizmo
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
     main.register()
+    probes.register()
+    bake.register()
+    light.register()
+    gizmo.register()
 
 def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
     main.unregister()
+    probes.unregister()
+    bake.unregister()
+    light.unregister()
+    gizmo.unregister()
 
 if __name__ == "__main__":
     register()
-   
