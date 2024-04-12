@@ -185,6 +185,16 @@ class AMV_OT_Delete_Zone(bpy.types.Operator):
         return get_selected_zone(context) is not None
     
     def execute(self, context):
+       
+        zone = get_selected_zone(context) 
+        collection_name = 'Probes-' + zone.name
+    
+        if collection_name in bpy.data.collections:
+            probes_collection = bpy.data.collections.get(collection_name)
+            for obj in probes_collection.objects:
+                bpy.data.objects.remove(obj, do_unlink=True)
+            bpy.data.collections.remove(probes_collection, do_unlink=True)
+            
         zones = context.scene.zones
         zone_index = context.scene.zone_index 
         zones.remove(zone_index)   

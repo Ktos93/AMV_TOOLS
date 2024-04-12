@@ -161,11 +161,12 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
         xml_filepath = os.path.join(new_folder_path, uuid + ".xml")
         create_xml_file(xml_filepath, zone)     
         
-        converter_path = os.path.join(filepath_full, "amv.py")
-
+        addon_directory = os.path.dirname(__file__)
+        converter_path = os.path.join(addon_directory, "[CONVERTER]", "amv.exe")
+       
         if os.path.exists(converter_path):
-            subprocess.run(["py", converter_path, json_filepath_0])
-            subprocess.run(["py", converter_path, json_filepath_1])
+            subprocess.run([converter_path, json_filepath_0])
+            subprocess.run([converter_path, json_filepath_1])
             
         bpy.context.scene.proggress = "Bake to JSON"
         return {'FINISHED'}
