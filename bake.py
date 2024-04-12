@@ -3,6 +3,7 @@ import numpy as np
 import json
 import os
 import subprocess
+import tifffile as tiff
 from .main import get_selected_zone
 from .xml import create_xml_file
 from .utils import setup_bake_settings , calculate_sphere_counts
@@ -146,27 +147,50 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
         
         if not os.path.exists(new_folder_path):
             os.makedirs(new_folder_path)
-        
-        
+         
         intuuid = str(int(uuid, 16))
-        json_filepath_0 = os.path.join(new_folder_path, intuuid + "_0.json")
-        json_filepath_1 = os.path.join(new_folder_path, intuuid + "_1.json")
+        addon_directory = os.path.dirname(__file__)
+        texconv_path = os.path.join(addon_directory, "[CONVERTER]", "texconv.exe")
+       
+        images = []
+        if isinstance(colors_3d_0, list):
+            for two_d_array in colors_3d_0:
+                image_data = np.array(two_d_array, dtype=np.float32)
+                images.append(image_data)
 
-        with open(json_filepath_0, 'w') as json_file:
-            json.dump(colors_3d_0, json_file)
-            
-        with open(json_filepath_1, 'w') as json_file:
-            json.dump(colors_3d_1, json_file) 
+            output_tiff_path = os.path.join(new_folder_path, f"{intuuid}_0.tiff")
+            tiff.imwrite(output_tiff_path, np.array(images, dtype=np.float32))
+   
+            subprocess.run([
+                texconv_path,
+                '-f', 'R11G11B10_FLOAT',
+                '-y',
+                '-m', '1',
+                '-o', new_folder_path,
+                output_tiff_path
+            ])
+            os.remove(output_tiff_path)
+
+        if isinstance(colors_3d_1, list):
+            for two_d_array in colors_3d_1:
+                image_data = np.array(two_d_array, dtype=np.float32)
+                images.append(image_data)
+
+            output_tiff_path = os.path.join(new_folder_path, f"{intuuid}_1.tiff")
+            tiff.imwrite(output_tiff_path, np.array(images, dtype=np.float32))
+   
+            subprocess.run([
+                texconv_path,
+                '-f', 'R11G11B10_FLOAT',
+                '-y',
+                '-m', '1',
+                '-o', new_folder_path,
+                output_tiff_path
+            ])
+            os.remove(output_tiff_path)
         
         xml_filepath = os.path.join(new_folder_path, uuid + ".xml")
         create_xml_file(xml_filepath, zone)     
-        
-        addon_directory = os.path.dirname(__file__)
-        converter_path = os.path.join(addon_directory, "[CONVERTER]", "amv.exe")
-       
-        if os.path.exists(converter_path):
-            subprocess.run([converter_path, json_filepath_0])
-            subprocess.run([converter_path, json_filepath_1])
             
         bpy.context.scene.proggress = "Bake to JSON"
         return {'FINISHED'}
