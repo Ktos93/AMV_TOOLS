@@ -46,15 +46,25 @@ for module in modules:
 if not user_site_added:
     add_user_site()
 
+from . import main
+from . import probes
+from . import bake
+from . import light
+from . import gizmo
 
-register, unregister = bpy.utils.register_submodule_factory(__package__, (
-    'main', 
-    'probes',
-    'bake',
-    'light',
-    'gizmo',
-))
+def register():
+    main.register()
+    probes.register()
+    bake.register()
+    light.register()
+    gizmo.register()
+
+def unregister():
+    main.unregister()
+    probes.unregister()
+    bake.unregister()
+    light.unregister()
+    gizmo.unregister()
 
 if __name__ == "__main__":
     register()
-   

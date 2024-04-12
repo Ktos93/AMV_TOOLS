@@ -20,7 +20,7 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
             return False
         if 'Probes-' + zone.name in bpy.data.collections:
             return False
-        if "Light" not in bpy.data.objects:
+        if "Emission" not in bpy.data.worlds["World"].node_tree.nodes:
             return False
         return True
 

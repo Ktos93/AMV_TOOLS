@@ -67,9 +67,12 @@ def setup_bake_settings():
 
 
 def update_light_strength(self, context):
-    if "EmissiveMaterial" in bpy.data.materials:
-        bpy.data.materials["EmissiveMaterial"].node_tree.nodes["Emission"].inputs[1].default_value = self.light_strength
+    if "Emission" in bpy.data.worlds["World"].node_tree.nodes:
+        bpy.data.worlds["World"].node_tree.nodes["Emission"].inputs[1].default_value = self.light_strength
 
+######################################################
+################ SOLLUMZ CODE <3 <3 ###################
+######################################################
 
 def draw_list_with_add_remove(layout: bpy.types.UILayout, add_operator: str, remove_operator: str, *temp_list_args, **temp_list_kwargs):
     """Draw a UIList with an add and remove button on the right column. Returns the left column."""
@@ -82,7 +85,6 @@ def draw_list_with_add_remove(layout: bpy.types.UILayout, add_operator: str, rem
     col.operator(remove_operator, text="", icon="REMOVE")
     return list_col, side_col
 
-
 def get_selected_vertices(obj):
     mode = obj.mode
     if obj.mode != "OBJECT":
@@ -92,7 +94,6 @@ def get_selected_vertices(obj):
              for v in obj.data.vertices if v.select]
     bpy.ops.object.mode_set(mode=mode)
     return verts
-
 
 
 def get_new_item_id(collection: bpy.types.bpy_prop_collection) -> int:

@@ -4,41 +4,28 @@ class AMV_OT_SetupLight(bpy.types.Operator):
     bl_idname = "amv.setup_light"
     bl_label = "Setup Light"
 
+    @classmethod
+    def poll(cls, context):
+        if "Emission" not in bpy.data.worlds["World"].node_tree.nodes:
+            return True
+        return False
+
     def execute(self, context):
 
-        if "Light" in bpy.data.objects:
-            self.report({"INFO"}, "Light object already exist!")
-            return {'CANCELLED'}
+        world = bpy.data.worlds["World"]
 
+        world.use_nodes = True
 
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=400, enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
-        obj = bpy.context.object
-        obj.name = "Light"
+        world.node_tree.nodes.clear()
 
-        # Check if the material already exists
-        material_name = "EmissiveMaterial"
-        if material_name in bpy.data.materials:
-            mat = bpy.data.materials[material_name]
-        else:
-            # Create a new material if it doesn't exist
-            mat = bpy.data.materials.new(name=material_name)
-            mat.use_nodes = True
-            nodes = mat.node_tree.nodes
-            emission_node = nodes.new(type='ShaderNodeEmission')
-            emission_node.inputs[0].default_value = (1.0, 1.0, 1.0, 1.0)  # Adjust the emission color here
-            # Link the emission node to the material output
-            material_output = nodes.get("Material Output")
-            links = mat.node_tree.links
-            links.new(emission_node.outputs[0], material_output.inputs[0])
+        emission_node = world.node_tree.nodes.new(type='ShaderNodeEmission')
 
-        # Assign the material to the object
-        if obj.data.materials:
-            obj.data.materials[0] = mat
-        else:
-            obj.data.materials.append(mat)
+        emission_node.inputs[0].default_value = (1.0, 1.0, 1.0, 1.0)
 
-        # hacky refresh
-        bpy.context.scene.light_strength = bpy.context.scene.light_strength
+        world_output_node = world.node_tree.nodes.new(type='ShaderNodeOutputWorld')
+        world.node_tree.links.new(emission_node.outputs[0], world_output_node.inputs[0])
+        world.node_tree.nodes["Emission"].inputs[1].default_value = bpy.context.scene.light_strength
+
         return {'FINISHED'}
 
 classes = (
