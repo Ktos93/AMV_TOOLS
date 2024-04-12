@@ -9,6 +9,27 @@ from .xml import create_xml_file
 from .utils import setup_bake_settings , calculate_sphere_counts
 
 
+def process_colors_3d(colors_3d, intuuid, index, new_folder_path, texconv_path):
+    images = []
+    if isinstance(colors_3d, list):
+        for two_d_array in colors_3d:
+            image_data = np.array(two_d_array, dtype=np.float32)
+            images.append(image_data)
+            
+        output_tiff_path = os.path.join(new_folder_path, f"{intuuid}_{index}.tiff")
+        tiff.imwrite(output_tiff_path, np.array(images, dtype=np.float32))
+
+        subprocess.run([
+            texconv_path,
+            '-f', 'R11G11B10_FLOAT',
+            '-y',
+            '-m', '1',
+            '-o', new_folder_path,
+            output_tiff_path
+        ])
+        os.remove(output_tiff_path)
+
+
 class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
     bl_idname = "amv.bake_amv_to_json"
     bl_label = "Bake AMV to JSON"
@@ -113,13 +134,11 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
                     r_1 =  np.mean(r_1[:3])
                     g_1 =  np.mean(g_1[:3])
                     b_1 =  np.mean(b_1[:3])
-
-                  
+  
                     current += 1
                     output_color_0 = [r_0,g_0,b_0]
                     output_color_1 = [r_1,g_1,b_1]
-                        
-                       
+                               
                     bpy.ops.geometry.color_attribute_remove() 
                     
                     row_colors_0.append(output_color_0)
@@ -152,42 +171,8 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
         addon_directory = os.path.dirname(__file__)
         texconv_path = os.path.join(addon_directory, "[CONVERTER]", "texconv.exe")
        
-        images = []
-        if isinstance(colors_3d_0, list):
-            for two_d_array in colors_3d_0:
-                image_data = np.array(two_d_array, dtype=np.float32)
-                images.append(image_data)
-
-            output_tiff_path = os.path.join(new_folder_path, f"{intuuid}_0.tiff")
-            tiff.imwrite(output_tiff_path, np.array(images, dtype=np.float32))
-   
-            subprocess.run([
-                texconv_path,
-                '-f', 'R11G11B10_FLOAT',
-                '-y',
-                '-m', '1',
-                '-o', new_folder_path,
-                output_tiff_path
-            ])
-            os.remove(output_tiff_path)
-
-        if isinstance(colors_3d_1, list):
-            for two_d_array in colors_3d_1:
-                image_data = np.array(two_d_array, dtype=np.float32)
-                images.append(image_data)
-
-            output_tiff_path = os.path.join(new_folder_path, f"{intuuid}_1.tiff")
-            tiff.imwrite(output_tiff_path, np.array(images, dtype=np.float32))
-   
-            subprocess.run([
-                texconv_path,
-                '-f', 'R11G11B10_FLOAT',
-                '-y',
-                '-m', '1',
-                '-o', new_folder_path,
-                output_tiff_path
-            ])
-            os.remove(output_tiff_path)
+        process_colors_3d(colors_3d_0, intuuid, 0, new_folder_path, texconv_path)
+        process_colors_3d(colors_3d_1, intuuid, 1, new_folder_path, texconv_path)
         
         xml_filepath = os.path.join(new_folder_path, uuid + ".xml")
         create_xml_file(xml_filepath, zone)     
