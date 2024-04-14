@@ -101,11 +101,13 @@ class AMV_OT_Calculate_Position(bpy.types.Operator):
         rotation_quaternion.normalize()
         euler_rotation = rotation_quaternion.to_euler()
 
+        origin = bbox_center(np.min(bbox, axis=0), np.max(bbox, axis=0))
+
         translated_bbox = bbox + np.array(bpy.context.scene.input_location)
 
         center = bbox_center(np.min(translated_bbox, axis=0), np.max(translated_bbox, axis=0))
 
-        rotated_bbox = rotate_bbox(translated_bbox, center, euler_rotation[2])
+        rotated_bbox = rotate_bbox(translated_bbox, center - origin, euler_rotation[2])
 
         center = bbox_center(np.min(rotated_bbox, axis=0), np.max(rotated_bbox, axis=0))
 
