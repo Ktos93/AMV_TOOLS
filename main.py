@@ -264,6 +264,7 @@ class Zone_Properties(bpy.types.PropertyGroup):
     sphere_radius: bpy.props.FloatProperty(name="Sphere Radius", default=0.15, min=0.05)
     output_location_rotation: bpy.props.FloatVectorProperty(name="Location + Rot", size=4)
     scale: bpy.props.FloatVectorProperty(name="Scale", default=(0.0, 0.0, 0.0))
+    force_color: bpy.props.FloatProperty(name="Force Color", default=0.0, min=0.0, max=1.0)
 
 
     id: bpy.props.IntProperty(name="Id")

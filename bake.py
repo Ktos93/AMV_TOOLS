@@ -52,7 +52,7 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
 
         zone = get_selected_zone(context) 
 
-        interval, sphere_radius, offset = zone.interval , zone.sphere_radius , zone.offset
+        interval, sphere_radius, offset, force_color = zone.interval , zone.sphere_radius , zone.offset, zone.force_color
 
         num_x_spheres, num_y_spheres, num_z_spheres = calculate_sphere_counts(interval, zone.bb_min, zone.bb_max)
 
@@ -85,64 +85,71 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
                         y = zone.bb_min[1] + j * interval + offset[1]
                         z = zone.bb_min[2] + i * interval + offset[2]
                         sphere_obj.location = (x, y, z)
+                    if force_color > 0:
+                        output_color_0 = [force_color,force_color,force_color]
+                        output_color_1 = [force_color,force_color,force_color] 
                         
-                    bpy.ops.geometry.color_attribute_add()
-                             
-                    bpy.ops.object.bake(type='DIFFUSE')
-                                
-                    vertices = sphere_obj.data.vertices
-                    vertex_colors = sphere_obj.data.color_attributes.active.data
-                             
-                    median_x = sum([v.co.x for v in vertices]) / len(vertices)
-                    median_y = sum([v.co.y for v in vertices]) / len(vertices)
-                    median_z = sum([v.co.z for v in vertices]) / len(vertices)
-                    
-                    color_array = [[],[],[],[],[],[]]
-                    
-                    for v in vertices:
+                        row_colors_0.append(output_color_0)
+                        row_colors_1.append(output_color_1)   
 
-                        if v.co.x >= median_x:
-                            color_array[0].append(vertex_colors[v.index].color[:])
-                        else:
-                            color_array[1].append(vertex_colors[v.index].color[:])   
+                    else:    
+                        bpy.ops.geometry.color_attribute_add()
+                                
+                        bpy.ops.object.bake(type='DIFFUSE')
+                                    
+                        vertices = sphere_obj.data.vertices
+                        vertex_colors = sphere_obj.data.color_attributes.active.data
+                                
+                        median_x = sum([v.co.x for v in vertices]) / len(vertices)
+                        median_y = sum([v.co.y for v in vertices]) / len(vertices)
+                        median_z = sum([v.co.z for v in vertices]) / len(vertices)
+                        
+                        color_array = [[],[],[],[],[],[]]
+                        
+                        for v in vertices:
+
+                            if v.co.x >= median_x:
+                                color_array[0].append(vertex_colors[v.index].color[:])
+                            else:
+                                color_array[1].append(vertex_colors[v.index].color[:])   
+                        
+                        for v in vertices:
+                            if v.co.y >= median_y:
+                                color_array[2].append(vertex_colors[v.index].color[:])
+                            else:
+                                color_array[3].append(vertex_colors[v.index].color[:])   
+                        
+                        for v in vertices:
+                            if v.co.z >= median_z:
+                                color_array[4].append(vertex_colors[v.index].color[:])
+                            else:
+                                color_array[5].append(vertex_colors[v.index].color[:])
+                                
                     
-                    for v in vertices:
-                        if v.co.y >= median_y:
-                            color_array[2].append(vertex_colors[v.index].color[:])
-                        else:
-                            color_array[3].append(vertex_colors[v.index].color[:])   
+                        r_0 =  np.mean(np.array(color_array[0]), axis=0)
+                        g_0 =  np.mean(np.array(color_array[1]), axis=0)
+                        b_0 =  np.mean(np.array(color_array[2]), axis=0)
+                        
+                        r_1 =  np.mean(np.array(color_array[3]), axis=0)
+                        g_1 =  np.mean(np.array(color_array[4]), axis=0)
+                        b_1 =  np.mean(np.array(color_array[5]), axis=0)
                     
-                    for v in vertices:
-                        if v.co.z >= median_z:
-                            color_array[4].append(vertex_colors[v.index].color[:])
-                        else:
-                            color_array[5].append(vertex_colors[v.index].color[:])
-                               
-                   
-                    r_0 =  np.mean(np.array(color_array[0]), axis=0)
-                    g_0 =  np.mean(np.array(color_array[1]), axis=0)
-                    b_0 =  np.mean(np.array(color_array[2]), axis=0)
-                    
-                    r_1 =  np.mean(np.array(color_array[3]), axis=0)
-                    g_1 =  np.mean(np.array(color_array[4]), axis=0)
-                    b_1 =  np.mean(np.array(color_array[5]), axis=0)
-                   
-                    r_0 =  np.mean(r_0[:3])
-                    g_0 =  np.mean(g_0[:3])
-                    b_0 =  np.mean(b_0[:3])
-                    
-                    r_1 =  np.mean(r_1[:3])
-                    g_1 =  np.mean(g_1[:3])
-                    b_1 =  np.mean(b_1[:3])
-  
-                    current += 1
-                    output_color_0 = [r_0,g_0,b_0]
-                    output_color_1 = [r_1,g_1,b_1]
-                               
-                    bpy.ops.geometry.color_attribute_remove() 
-                    
-                    row_colors_0.append(output_color_0)
-                    row_colors_1.append(output_color_1)
+                        r_0 =  np.mean(r_0[:3])
+                        g_0 =  np.mean(g_0[:3])
+                        b_0 =  np.mean(b_0[:3])
+                        
+                        r_1 =  np.mean(r_1[:3])
+                        g_1 =  np.mean(g_1[:3])
+                        b_1 =  np.mean(b_1[:3])
+    
+                        current += 1
+                        output_color_0 = [r_0,g_0,b_0]
+                        output_color_1 = [r_1,g_1,b_1]
+                                
+                        bpy.ops.geometry.color_attribute_remove() 
+                        
+                        row_colors_0.append(output_color_0)
+                        row_colors_1.append(output_color_1)
                     
                 colors_2d_0.append(row_colors_0)
                 colors_2d_1.append(row_colors_1)
