@@ -21,7 +21,13 @@ pybin = sys.executable
 def add_user_site():
     # Locate users site-packages (writable)
     user_site = subprocess.check_output([pybin, "-m", "site", "--user-site"])
-    user_site = user_site.decode("utf8").rstrip("\n")   # Convert to string and remove line-break
+    
+    try:
+        user_site = user_site.decode("utf-8").rstrip("\n")   # Convert to string and remove line-break
+    except UnicodeDecodeError:
+    # If decoding with utf-8 fails, try with latin1
+        user_site = user_site.decode("latin1").rstrip("\n")
+
     # Add user packages to sys.path (if it exits)
     user_site_exists = user_site is not None
     if user_site not in sys.path and user_site_exists:
