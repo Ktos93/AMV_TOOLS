@@ -45,7 +45,7 @@ def install_module(module : str):
 
 user_site_added = add_user_site()
 enable_pip()
-modules = ["tifffile"] 
+modules = ["tifffile", "Pillow"] 
 for module in modules:
     install_module(module)
 # If there was no user-site before...
@@ -57,6 +57,7 @@ from . import probes
 from . import bake
 from . import light
 from . import gizmo
+from . import reflectionProbes
 
 def register():
     main.register()
@@ -64,6 +65,7 @@ def register():
     bake.register()
     light.register()
     gizmo.register()
+    reflectionProbes.register()
 
 def unregister():
     main.unregister()
@@ -71,6 +73,7 @@ def unregister():
     bake.unregister()
     light.unregister()
     gizmo.unregister()
+    reflectionProbes.unregister()
 
 if __name__ == "__main__":
     register()

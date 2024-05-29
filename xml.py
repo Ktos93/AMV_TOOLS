@@ -77,3 +77,85 @@ def create_xml_file(file_path, zone):
     ET.indent(tree, space="\t", level=0)
     
     tree.write(file_path, xml_declaration=True, encoding="utf-8")    
+
+
+def create_xml_file_reflection_probes(file_path, uuid):
+    root = ET.Element("RDR2TextureDictionary", version="1")
+
+    textures = ET.SubElement(root, "Textures")
+
+    common_dimension = "TextureCube"
+    common_flags = "402685954"
+
+    items = [
+        {"Name": f"{uuid}_d", "SRVUnknown08": "5378212016"},
+        {"Name": f"{uuid}_1"},
+        {"Name": f"{uuid}_0"}
+    ]
+
+    for item_data in items:
+        item = ET.SubElement(textures, "Item")
+        name = ET.SubElement(item, "Name")
+        name.text = item_data["Name"]
+
+        dimension = ET.SubElement(item, "Dimension")
+        dimension.text = common_dimension
+
+        ET.SubElement(item, "Flags", value=common_flags)
+        
+        if "SRVUnknown08" in item_data:
+            ET.SubElement(item, "SRVUnknown08", value=item_data["SRVUnknown08"])
+
+
+    tree = ET.ElementTree(root)
+    
+    ET.indent(tree, space="\t", level=0)
+
+    tree.write(file_path, xml_declaration=True, encoding="utf-8")    
+
+
+def create_xml_file_reflection_probes_room(file_path, zone):
+    root = ET.Element("reflectionProbes", itemType="CReflectionProbeData")
+
+    item = ET.SubElement(root, "Item")
+
+    bbmin = zone.bb_min
+    bbmax = zone.bb_max
+    min_extents = ET.SubElement(item, "minExtents")
+    min_extents.set("x", "{:.6f}".format(bbmin[0]))
+    min_extents.set("y", "{:.6f}".format(bbmin[1]))
+    min_extents.set("z", "{:.6f}".format(bbmin[2]))
+
+    max_extents = ET.SubElement(item, "maxExtents")
+    max_extents.set("x", "{:.6f}".format(bbmax[0]))
+    max_extents.set("y", "{:.6f}".format(bbmax[1]))
+    max_extents.set("z", "{:.6f}".format(bbmax[2]))
+
+    rotation = ET.SubElement(item, "rotation")
+    rotation.set("x", "0")
+    rotation.set("y", "0")
+    rotation.set("z", "0")
+    rotation.set("w", "1")
+
+    center_offset = ET.SubElement(item, "centerOffset")
+    center_offset.set("x", "0")
+    center_offset.set("y", "0")
+    center_offset.set("z", "0")
+
+    influence_extents = ET.SubElement(item, "influenceExtents")
+    influence_extents.set("x", "1")
+    influence_extents.set("y", "1")
+    influence_extents.set("z", "1")
+
+    probe_priority = ET.SubElement(item, "probePriority")
+    probe_priority.set("value", "255")
+
+    guid = ET.SubElement(item, "guid")
+    guid.set("value", zone.guid)
+
+    tree = ET.ElementTree(root)
+    
+    ET.indent(tree, space="\t", level=0)
+
+    tree.write(file_path, xml_declaration=True, encoding="utf-8")    
+
