@@ -139,9 +139,11 @@ class AMV_OT_BakeReflectionProbes(bpy.types.Operator):
                 camera.rotation_mode = 'XYZ'
                 camera.rotation_euler =  tuple(a - b for a, b in zip(direction, interior_rotation))
 
-                camera.data.lens = 16
-                camera.data.angle = 1.570
                 camera.data.type = 'PERSP'
+                # camera.data.lens = 16
+                camera.data.lens_unit = 'FOV'
+                camera.data.angle = 1.5708
+              
 
                 bpy.context.scene.render.resolution_x = 1024
                 bpy.context.scene.render.resolution_y = 1024
