@@ -60,9 +60,9 @@ def convertRefProbes(start_path, uuid):
 
         for file in files:
             if folder_name == "color":
-                array = png_to_array(file)* 0.8
+                array = png_to_array(file)
                 array = np.clip(array, 0, 255).astype(np.uint8)
-                array_ao = png_to_array(os.path.join(start_path, "ao", os.path.basename(file)))
+                array_ao = png_to_array(os.path.join(start_path, "ao", os.path.basename(file))) * 0.5
                 array = set_alpha_from_r(array, array_ao)
             elif folder_name == "depth":
                 array = png_to_array(file)
