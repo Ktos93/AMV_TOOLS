@@ -9,12 +9,12 @@ from .xml import create_xml_file_reflection_probes_room
 camera_names = ['z+', 'z-', 'y+', 'y-', 'x+', 'x-']
 
 camera_directions = [
-    (0, 0, -3.146), 
-    (0, 3.146, 3.146), 
+    (0, 0, -3.1416), 
+    (0, 3.1416, 3.1416), 
     (-1.5708, 0, 0), 
     (1.5708, 0, 0),  
-    (0, -1.5708, 3.146), 
-    (0, 1.5708, 3.146)
+    (0, -1.5708, 3.1416), 
+    (0, 1.5708, 3.1416)
 ]
 
 texture_types = ["normal", "depth", "color", "ao"]
