@@ -1,5 +1,7 @@
 import bpy
 import os
+import math
+import numpy as np
 from mathutils import Quaternion
 from .main import get_selected_zone
 from.converRefProbes import convertRefProbes
@@ -7,6 +9,7 @@ from.utils import gen_hash, compute_probe_hash
 from .xml import create_xml_file_reflection_probes_room
 
 camera_names = ['z+', 'z-', 'y+', 'y-', 'x+', 'x-']
+map_node = None
 
 camera_directions = [
     (0, 0, -3.1416), 
@@ -20,10 +23,14 @@ camera_directions = [
 texture_types = ["normal", "depth", "color", "ao"]
 
 def SetupProbesComposting(type):
+    global map_node
+    map_node = None
     bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-    bpy.context.scene.render.image_settings.file_format = 'PNG'
-    bpy.context.scene.render.image_settings.color_depth = '8'
+    bpy.context.scene.render.image_settings.file_format = 'TIFF'
     bpy.context.scene.render.image_settings.color_mode = 'RGB'
+    bpy.context.scene.render.image_settings.color_depth = '16'
+    bpy.context.scene.render.image_settings.compression = 0
+
 
     # Włącz tryb kompozytowy
     bpy.context.scene.use_nodes = True
@@ -36,18 +43,24 @@ def SetupProbesComposting(type):
     bpy.context.scene.view_settings.look = 'None'   
     bpy.context.scene.view_settings.exposure = 0
     bpy.context.scene.view_settings.gamma = 1
+
     
         
     match type:
         case "depth":
-            bpy.context.scene.view_settings.view_transform = 'AgX'
+            bpy.context.scene.view_settings.view_transform = 'Raw'
             bpy.context.scene.sequencer_colorspace_settings.name = 'Non-Color'
             bpy.context.scene.view_layers["ViewLayer"].use_pass_z = True
             render_layers = tree.nodes.new(type='CompositorNodeRLayers')
-            normalize = tree.nodes.new(type='CompositorNodeNormalize')
+            
+            map_node = tree.nodes.new(type='CompositorNodeMapRange')
+            map_node.inputs['From Min'].default_value = 0.1
+            map_node.inputs['From Max'].default_value = 1000
+            map_node.inputs['To Min'].default_value = 0.99
+
             composite = tree.nodes.new(type='CompositorNodeComposite')
-            tree.links.new(render_layers.outputs['Depth'], normalize.inputs['Value'])
-            tree.links.new(normalize.outputs['Value'], composite.inputs['Image'])    
+            tree.links.new(render_layers.outputs['Depth'], map_node.inputs['Value'])
+            tree.links.new(map_node.outputs['Value'], composite.inputs['Image'])    
             
         case "ao":
             bpy.context.scene.eevee.use_gtao = True
@@ -98,8 +111,30 @@ def SetupProbesComposting(type):
             tree.links.new(multiply.outputs['Image'], add.inputs[1])
             tree.links.new(combine_xyz_2.outputs['Vector'], add.inputs[2])
             tree.links.new(add.outputs['Image'], composite.inputs['Image'])
-                        
-import numpy as np
+
+
+def euclidean_distance(point1, point2):
+    return math.sqrt(sum((p1 - p2) ** 2 for p1, p2 in zip(point1, point2)))            
+
+def get_max_distance(center, zone_bb_min, zone_bb_max):
+    corners = [
+    (zone_bb_min[0], zone_bb_min[1], zone_bb_min[2]),
+    (zone_bb_min[0], zone_bb_min[1], zone_bb_max[2]),
+    (zone_bb_min[0], zone_bb_max[1], zone_bb_min[2]),
+    (zone_bb_min[0], zone_bb_max[1], zone_bb_max[2]),
+    (zone_bb_max[0], zone_bb_min[1], zone_bb_min[2]),
+    (zone_bb_max[0], zone_bb_min[1], zone_bb_max[2]),
+    (zone_bb_max[0], zone_bb_max[1], zone_bb_min[2]),
+    (zone_bb_max[0], zone_bb_max[1], zone_bb_max[2]),
+    ]
+
+    distance_to_z_max = abs(center[2] - zone_bb_max[2])
+    distance_to_z_min = abs(center[2] - zone_bb_min[2])
+
+    max_distance = max(euclidean_distance(center, corner) for corner in corners)
+    z_max_distance = max(distance_to_z_max, distance_to_z_min)
+    return max_distance, z_max_distance
+
 class AMV_OT_BakeReflectionProbes(bpy.types.Operator):
     bl_idname = "amv.bake_reflection_probes"
     bl_label = "Bake Reflection Probes"
@@ -114,9 +149,11 @@ class AMV_OT_BakeReflectionProbes(bpy.types.Operator):
 
     def execute(self, context):
         
+        global map_node
         zone = get_selected_zone(context) 
 
         center = tuple((min_val + max_val) / 2 for min_val, max_val in zip(zone.bb_min, zone.bb_max))
+        max_dist, z_max_dist = get_max_distance(center, zone.bb_min, zone.bb_max)
 
         quaternion_value = bpy.context.scene.input_rotation
         quaternion_value = (quaternion_value[3], quaternion_value[0], quaternion_value[1], quaternion_value[2])
@@ -143,6 +180,16 @@ class AMV_OT_BakeReflectionProbes(bpy.types.Operator):
                 # camera.data.lens = 16
                 camera.data.lens_unit = 'FOV'
                 camera.data.angle = 1.5708
+             
+                print(map_node)
+                if map_node is not None:
+
+                    if "z" in name:
+                        print(z_max_dist)
+                        map_node.inputs['From Max'].default_value = z_max_dist*1.25
+                    else:
+                        map_node.inputs['From Max'].default_value = max_dist
+
               
 
                 bpy.context.scene.render.resolution_x = 1024
@@ -160,7 +207,7 @@ class AMV_OT_BakeReflectionProbes(bpy.types.Operator):
 
                 type_folder_path = os.path.join(new_folder_path, type)
 
-                file_path = os.path.join(type_folder_path, f"{name}.png")
+                file_path = os.path.join(type_folder_path, f"{name}.tif")
         
                 bpy.data.images['Render Result'].save_render(file_path)
                 bpy.data.objects.remove(camera, do_unlink=True)
