@@ -59,13 +59,28 @@ def convertRefProbes(start_path, uuid):
 
         for file in files:
             if folder_name == "color":
-                array = png_to_array(file) * 0.8
+                array = png_to_array(file)
+
+                black_color = np.array([0, 0, 0])
+                tolerance = 10
+                diff = np.abs(array[:, :, :3] - black_color)
+                mask = np.all(diff <= tolerance, axis=-1)
+                max_value = (int(np.iinfo(array.dtype).max/2))
+                array[mask] = [max_value, max_value, max_value]
+
                 # array = np.clip(array, 0, 255).astype(np.uint8)
-                array_ao = png_to_array(os.path.join(start_path, "ao", os.path.basename(file)))
+                array_ao = png_to_array(os.path.join(start_path, "ao", os.path.basename(file))) * 0.5
+
+                black_color = np.array([0, 0, 0])
+                tolerance = 10
+                diff = np.abs(array_ao[:, :, :3] - black_color)
+                mask = np.all(diff <= tolerance, axis=-1)
+                max_value = np.iinfo(array.dtype).max
+                array_ao[mask] = [max_value, max_value, max_value]
+
                 array = set_alpha_from_r(array, array_ao)
             elif folder_name == "depth":
                 array = png_to_array(file)
-                max_value = np.iinfo(array.dtype).max
                 array[array == max_value] = max_value - 10
             elif folder_name == "normal":
                 array = png_to_array(file)

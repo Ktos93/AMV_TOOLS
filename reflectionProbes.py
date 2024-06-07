@@ -54,7 +54,7 @@ def SetupProbesComposting(type):
             render_layers = tree.nodes.new(type='CompositorNodeRLayers')
             
             map_node = tree.nodes.new(type='CompositorNodeMapRange')
-            map_node.inputs['From Min'].default_value = 0.1
+            map_node.inputs['From Min'].default_value = 0
             map_node.inputs['From Max'].default_value = 1000
             map_node.inputs['To Min'].default_value = 0.99
 
@@ -73,7 +73,7 @@ def SetupProbesComposting(type):
             tree.links.new(render_layers.outputs['AO'], composite.inputs['Image'])
             
         case "color":
-            bpy.context.scene.view_settings.view_transform = 'AgX'
+            bpy.context.scene.view_settings.view_transform = 'Standard'
             bpy.context.scene.sequencer_colorspace_settings.name = 'sRGB'
             bpy.context.scene.view_layers["ViewLayer"].use_pass_diffuse_color = True
             render_layers = tree.nodes.new(type='CompositorNodeRLayers')
@@ -186,9 +186,9 @@ class AMV_OT_BakeReflectionProbes(bpy.types.Operator):
 
                     if "z" in name:
                         print(z_max_dist)
-                        map_node.inputs['From Max'].default_value = z_max_dist*1.25
+                        map_node.inputs['From Max'].default_value = z_max_dist*2
                     else:
-                        map_node.inputs['From Max'].default_value = max_dist
+                        map_node.inputs['From Max'].default_value = max_dist*4
 
               
 
