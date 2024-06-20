@@ -45,7 +45,7 @@ def install_module(module : str):
 
 user_site_added = add_user_site()
 enable_pip()
-modules = ["tifffile", "Pillow"] 
+modules = ["tifffile"] 
 for module in modules:
     install_module(module)
 # If there was no user-site before...

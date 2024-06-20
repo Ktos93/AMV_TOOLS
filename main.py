@@ -2,7 +2,7 @@ import bpy
 import numpy as np
 from mathutils import Vector, Quaternion
 
-from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_light_strength, get_selected_vertices
+from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_light_strength, get_selected_vertices, gen_hash, compute_probe_hash
 
 
 class AMV_PT_Tools(bpy.types.Panel):
@@ -70,6 +70,50 @@ class AMV_PT_Location_Tools(bpy.types.Panel):
         column.prop(context.scene, "input_location", text="Interior Location")
         column.prop(context.scene, "input_rotation", text="Interior Rotation")
        
+
+class AMV_PT_Door_Tools(bpy.types.Panel):
+    bl_label = "Door Tools"
+    bl_idname = "AMV_PT_Door_Tools"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'AMV'
+    bl_order = 3
+
+    def draw(self, context):
+        layout = self.layout
+
+        column = layout.column()
+        column.operator("amv.generate_door_uuid")
+        column.prop(context.scene, "door_uuid", text="Door UUID")
+
+        layout.use_property_split = True
+        layout.use_property_decorate = True
+        column = layout.column()
+        column.prop(context.scene, "door_model_name", text="Door Model Name")
+        column.prop(context.scene, "door_location", text="Door Location")
+       
+
+
+class AMV_OT_Door_UUID(bpy.types.Operator):
+    bl_idname = "amv.generate_door_uuid"
+    bl_label = "Generate Door UUID"
+
+    @classmethod
+    def poll(cls, context):
+        return True
+    
+    def execute(self, context):
+        door_model_name = context.scene.door_model_name   
+        door_location = context.scene.door_location   
+        door_hash = gen_hash(door_model_name)
+        data = {}
+        data[0] = int(door_location[0] * 100.0)& 0xFFFFFFFF
+        data[1] = int(door_location[1] * 100.0) & 0xFFFFFFFF
+        data[2] = int(door_location[2] * 100.0) & 0xFFFFFFFF
+        probe_hash = compute_probe_hash(data, 0)   
+        context.scene.door_uuid  = str(hex((door_hash << 32) | probe_hash)).upper().replace("0X", "0x")
+
+        return {'FINISHED'}
 
 
 class AMV_OT_Calculate_Position(bpy.types.Operator):
@@ -284,9 +328,11 @@ class Zone_Properties(bpy.types.PropertyGroup):
 classes = (
     AMV_PT_Tools,
     AMV_PT_Location_Tools,
+    AMV_PT_Door_Tools,
     AMV_OT_Calculate_Position,
     AMV_PT_General_Tools,
     AMV_OT_Generate_UUID,
+    AMV_OT_Door_UUID,
     AMV_OT_Create_Zone,
     AMV_OT_Delete_Zone,
     Zone_Properties,
@@ -308,6 +354,10 @@ def register():
     bpy.types.Scene.zone_index = bpy.props.IntProperty(name="Zone Index", default=0)
     bpy.types.Scene.proggress = bpy.props.StringProperty(default="Bake AMV")
     bpy.types.Scene.bounces = bpy.props.IntProperty(name="Bounces", default=0)
+
+    bpy.types.Scene.door_uuid = bpy.props.StringProperty(name="Door UUID", default="00000000000000000000")
+    bpy.types.Scene.door_model_name = bpy.props.StringProperty(name="Door Model Name")
+    bpy.types.Scene.door_location = bpy.props.FloatVectorProperty(name="Door Location")
 
 
 def unregister():
