@@ -1,5 +1,6 @@
 import bpy
 import numpy as np
+import time
 from mathutils import Vector, Quaternion
 
 from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_light_strength, get_selected_vertices, gen_hash, compute_probe_hash
@@ -197,15 +198,18 @@ class AMV_OT_Generate_UUID(bpy.types.Operator):
         return get_selected_zone(context) is not None
 
     def execute(self, context):
-        random_bytes = np.random.bytes(8)
-        hex_bytes = ''.join(f"{x:02X}" for x in random_bytes)
-        formatted_uuid = '0x' + hex_bytes[:16]
 
-        random_bytes = np.random.bytes(8)
-        hex_bytes = ''.join(f"{x:02X}" for x in random_bytes)
-        formatted_guid = '0x' + hex_bytes[:16]
+        timestamp = int(time.time())
+
+        random_bytes = np.random.bytes(4)
+        hex_bytes = int(''.join(f"{x}" for x in random_bytes))
+        formatted_uuid = str(hex((timestamp << 32) | hex_bytes)).upper().replace("0X", "0x")
+
+        random_bytes = np.random.bytes(4)
+        hex_bytes = int(''.join(f"{x}" for x in random_bytes))
+        formatted_guid = str(hex((timestamp << 32) | hex_bytes)).upper().replace("0X", "0x")
+
         zone = get_selected_zone(context)
-
         zone.uuid = formatted_uuid
         zone.guid = formatted_guid
 
