@@ -52,7 +52,7 @@ This addon is distributed under the [GNU General Public License v3.0](https://ww
 ![move_probes](https://github.com/Ktos93/AMV_TOOLS/assets/43894510/78d7f6f0-310f-42e3-9729-08d1decaae82)
 ![move_probes2](https://github.com/Ktos93/AMV_TOOLS/assets/43894510/75182d31-bda6-4179-bc29-bb11d678da1d)
 
-10. Now, click Bake to JSON. Script will bake two textures and save it to .DDS files. This step may take a shorter or longer while, patience is the key.
+10. Now, click Bake AMV. Script will bake two textures and save it to .DDS files. This step may take a shorter or longer while, patience is the key.
 ![9-bake](https://github.com/Ktos93/AMV_TOOLS/assets/54397041/26058803-be02-4145-a3ac-5ac828347f0e)
 
 11. Open the folder selected in Output Directory. You'll notice a folder with a hexadecimal name.

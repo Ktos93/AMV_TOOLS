@@ -1,8 +1,9 @@
 import bpy
 import numpy as np
+import time
 from mathutils import Vector, Quaternion
 
-from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_light_strength, get_selected_vertices
+from .utils import draw_list_with_add_remove , bbox_center, rotate_bbox, bbox_dimensions, get_new_item_id, update_light_strength, get_selected_vertices, gen_hash, compute_probe_hash
 
 
 class AMV_PT_Tools(bpy.types.Panel):
@@ -36,6 +37,7 @@ class AMV_PT_Tools(bpy.types.Panel):
 
         list_col.operator("amv.set_bounds_from_selection", icon="GROUP_VERTEX")
         list_col.operator("amv.bake_amv_to_json", text=str(bpy.context.scene.proggress), icon="RENDERLAYERS")
+        list_col.operator("amv.bake_reflection_probes", icon="RENDERLAYERS")
         list_col.operator("amv.calculate_position")
         list_col.operator("amv.generate_uuid")
         row = list_col.row()
@@ -52,7 +54,7 @@ class AMV_PT_Tools(bpy.types.Panel):
 
 
 class AMV_PT_Location_Tools(bpy.types.Panel):
-    bl_label = "Interior Location"
+    bl_label = "Interior Info"
     bl_idname = "AMV_PT_Location_Tools"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -65,9 +67,54 @@ class AMV_PT_Location_Tools(bpy.types.Panel):
         layout.use_property_split = True
         layout.use_property_decorate = True
         column = layout.column()
+        column.prop(context.scene, "interior_name", text="Interior Name")
         column.prop(context.scene, "input_location", text="Interior Location")
-        layout.prop(context.scene, "input_rotation", text="Interior Rotation")
+        column.prop(context.scene, "input_rotation", text="Interior Rotation")
        
+
+class AMV_PT_Door_Tools(bpy.types.Panel):
+    bl_label = "Door Tools"
+    bl_idname = "AMV_PT_Door_Tools"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'AMV'
+    bl_order = 3
+
+    def draw(self, context):
+        layout = self.layout
+
+        column = layout.column()
+        column.operator("amv.generate_door_uuid")
+        column.prop(context.scene, "door_uuid", text="Door UUID")
+
+        layout.use_property_split = True
+        layout.use_property_decorate = True
+        column = layout.column()
+        column.prop(context.scene, "door_model_name", text="Door Model Name")
+        column.prop(context.scene, "door_location", text="Door Location")
+       
+
+
+class AMV_OT_Door_UUID(bpy.types.Operator):
+    bl_idname = "amv.generate_door_uuid"
+    bl_label = "Generate Door UUID"
+
+    @classmethod
+    def poll(cls, context):
+        return True
+    
+    def execute(self, context):
+        door_model_name = context.scene.door_model_name   
+        door_location = context.scene.door_location   
+        door_hash = gen_hash(door_model_name)
+        data = {}
+        data[0] = int(door_location[0] * 100.0)& 0xFFFFFFFF
+        data[1] = int(door_location[1] * 100.0) & 0xFFFFFFFF
+        data[2] = int(door_location[2] * 100.0) & 0xFFFFFFFF
+        probe_hash = compute_probe_hash(data, 0)   
+        context.scene.door_uuid  = str(hex((door_hash << 32) | probe_hash)).upper().replace("0X", "0x")
+
+        return {'FINISHED'}
 
 
 class AMV_OT_Calculate_Position(bpy.types.Operator):
@@ -151,11 +198,20 @@ class AMV_OT_Generate_UUID(bpy.types.Operator):
         return get_selected_zone(context) is not None
 
     def execute(self, context):
-        random_bytes = np.random.bytes(8)
-        hex_bytes = ''.join(f"{x:02X}" for x in random_bytes)
-        formatted_uuid = '0x' + hex_bytes[:16]
+
+        timestamp = int(time.time())
+
+        random_bytes = np.random.bytes(4)
+        hex_bytes = int(''.join(f"{x}" for x in random_bytes))
+        formatted_uuid = str(hex((timestamp << 32) | hex_bytes)).upper().replace("0X", "0x")
+
+        random_bytes = np.random.bytes(4)
+        hex_bytes = int(''.join(f"{x}" for x in random_bytes))
+        formatted_guid = str(hex((timestamp << 32) | hex_bytes)).upper().replace("0X", "0x")
+
         zone = get_selected_zone(context)
         zone.uuid = formatted_uuid
+        zone.guid = formatted_guid
 
         return {'FINISHED'}
 
@@ -259,6 +315,7 @@ class Zone_Properties(bpy.types.PropertyGroup):
     bb_min: bpy.props.FloatVectorProperty(name="Bounds Min", subtype="XYZ")
     bb_max: bpy.props.FloatVectorProperty(name="Bounds Max", subtype="XYZ")
     uuid: bpy.props.StringProperty(name="UUID", default="00000000000000000000")
+    guid: bpy.props.StringProperty(name="GUID", default="00000000000000000000")
     interval: bpy.props.FloatProperty(name="Interval", default=1.0, min=0.1)
     offset: bpy.props.FloatVectorProperty(name="Offset", default=(0.5, 0.5, 0.5), update=update_probes_offset)
     sphere_radius: bpy.props.FloatProperty(name="Sphere Radius", default=0.15, min=0.05)
@@ -275,9 +332,11 @@ class Zone_Properties(bpy.types.PropertyGroup):
 classes = (
     AMV_PT_Tools,
     AMV_PT_Location_Tools,
+    AMV_PT_Door_Tools,
     AMV_OT_Calculate_Position,
     AMV_PT_General_Tools,
     AMV_OT_Generate_UUID,
+    AMV_OT_Door_UUID,
     AMV_OT_Create_Zone,
     AMV_OT_Delete_Zone,
     Zone_Properties,
@@ -291,13 +350,18 @@ def register():
         bpy.utils.register_class(cls)
 
     bpy.types.Scene.output_directory = bpy.props.StringProperty(name="Output Directory", subtype='DIR_PATH')
+    bpy.types.Scene.interior_name = bpy.props.StringProperty(name="Interior Name")
     bpy.types.Scene.input_location = bpy.props.FloatVectorProperty(name="Interior Location")
     bpy.types.Scene.input_rotation = bpy.props.FloatVectorProperty(name="Interior Rotation", size=4)
     bpy.types.Scene.light_strength = bpy.props.FloatProperty(name="Light Strength", update=update_light_strength, default=0.5)
     bpy.types.Scene.zones = bpy.props.CollectionProperty(type=Zone_Properties, name="Zones")
     bpy.types.Scene.zone_index = bpy.props.IntProperty(name="Zone Index", default=0)
-    bpy.types.Scene.proggress = bpy.props.StringProperty(default="Bake to JSON")
+    bpy.types.Scene.proggress = bpy.props.StringProperty(default="Bake AMV")
     bpy.types.Scene.bounces = bpy.props.IntProperty(name="Bounces", default=0)
+
+    bpy.types.Scene.door_uuid = bpy.props.StringProperty(name="Door UUID", default="00000000000000000000")
+    bpy.types.Scene.door_model_name = bpy.props.StringProperty(name="Door Model Name")
+    bpy.types.Scene.door_location = bpy.props.FloatVectorProperty(name="Door Location")
 
 
 def unregister():
@@ -307,6 +371,7 @@ def unregister():
     del bpy.types.Scene.output_directory
     del bpy.types.Scene.input_location
     del bpy.types.Scene.input_rotation
+    del bpy.types.Scene.interior_name
     del bpy.types.Scene.light_strength
     del bpy.types.Scene.zones
     del bpy.types.Scene.zone_index

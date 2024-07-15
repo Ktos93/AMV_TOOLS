@@ -184,7 +184,7 @@ class AMV_OT_BakeAMVToJSON(bpy.types.Operator):
         xml_filepath = os.path.join(new_folder_path, uuid + ".xml")
         create_xml_file(xml_filepath, zone)     
             
-        bpy.context.scene.proggress = "Bake to JSON"
+        bpy.context.scene.proggress = "Bake AMV"
         return {'FINISHED'}
     
 
