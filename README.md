@@ -3,6 +3,8 @@
 ## Introduction
 This addon is specifically designed to assist in creating ambient mask volumes within the Blender environment
 
+If support needed join [discord](https://discord.gg/2wmHGs4B9B) and ask on #fix-my-mod
+
 ## Features
 - **Efficient Volume Creation**: Easily create ambient mask volumes for environments directly within Blender.
 - **Customization Options**: Adjust various parameters to fine-tune the appearance and behavior of ambient mask volumes.
