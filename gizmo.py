@@ -48,10 +48,7 @@ def get_verts(bbmin, bbmax):
 
 class BoundingBoxGizmo(bpy.types.Gizmo):
     bl_idname = "OBJECT_GT_bounding_box"
-
-    def __init__(self):
-        super().__init__()
-        self.linked_zone = None
+    linked_zone = None
 
     def draw(self, context):
         obj = context.active_object
@@ -93,10 +90,7 @@ class BoundingBoxGizmoGroup(bpy.types.GizmoGroup):
 
 class ZoneGizmo(bpy.types.Gizmo):
     bl_idname = "OBJECT_GT_zone"
-
-    def __init__(self):
-        super().__init__()
-        self.linked_zone = None
+    linked_zone = None
 
     def draw(self, context):
         selected_zone = get_selected_zone(context)
