@@ -25,7 +25,10 @@ texture_types = ["normal", "depth", "color", "ao"]
 def SetupProbesComposting(type):
     global map_node
     map_node = None
-    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+    try:
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE_NEXT'
+    except TypeError:
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
     bpy.context.scene.render.image_settings.file_format = 'TIFF'
     bpy.context.scene.render.image_settings.color_mode = 'RGB'
     bpy.context.scene.render.image_settings.color_depth = '16'
